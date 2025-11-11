@@ -2,9 +2,7 @@ import numpy as np
 from arduino import Arduino
 
 if __name__ == '__main__':
-    uno = Arduino(
-        PORT="COM6"
-    )
+    uno = Arduino(PORT="COM6")
 
     click_count = np.array([0, 0, 0])
 
