@@ -4,8 +4,10 @@ from typing import Iterable
 import pyfirmata2
 
 class Arduino:
-    def __init__(self, PORT: str):
+    def __init__(self, PORT: str, FPS: float):
         self.PORT = PORT
+        self.FPS = FPS
+
         self.board = pyfirmata2.Arduino(PORT)
 
         self.SAMPLING_INTERVAL = 100
@@ -17,7 +19,7 @@ class Arduino:
 
         self.board.samplingOn(self.SAMPLING_INTERVAL)
 
-        self.is_prev_clicked: dict[str, bool] = {}
+        self.__pin_states : dict[str, float] = {}
 
     def __del__(self):
         if (self.board):
@@ -49,22 +51,35 @@ class Arduino:
             self.led_off(pins)
             time.sleep(gap)
 
-    def add_on_click_event(self, pin: str, call_back):
-        def clicked(v):
-            is_pressed = v < 0.5
-            if (is_pressed):
-                self.is_prev_clicked[pin] = True
+    def __register_pin(self, pin : str):
+        self.__pin_states[pin] = 0
+
+        def on_change(value):
+            if (value < 0.5):
+                self.__pin_states[pin] = time.time()
             else:
-                if (not self.is_prev_clicked[pin]):
-                    return
+                self.__pin_states[pin] = 0
 
-                self.is_prev_clicked[pin] = False
-                call_back()
 
-        self.is_prev_clicked[pin] = False
-        analog_1 = self.board.get_pin(pin)
-        analog_1.register_callback(clicked)
-        analog_1.enable_reporting()
+        pin_obj = self.board.get_pin(pin)
+        pin_obj.register_callback(on_change)
+        pin_obj.enable_reporting()
+
+
+    def is_button_press(self, pin: str) -> bool:
+        if(pin not in self.__pin_states):
+            self.__register_pin(pin)
+
+        current_pin_state = self.__pin_states[pin]
+        return current_pin_state != 0
+
+    def is_button_pressed(self, pin: str) -> bool:
+        if(pin not in self.__pin_states):
+            self.__register_pin(pin)
+
+        current_pin_state = self.__pin_states[pin]
+        current_time = time.time()
+        return current_time - current_pin_state <= self.FPS
 
     def buzzer_sound(self, length : float):
         self.board.digital[self.BUZZER_PIN].write(self.LED_ON)
