@@ -50,10 +50,10 @@ def main(stdscr: curses.window):
             stdscr.addch(b["y"], b["x"], "+")
             stdscr.attroff(curses.color_pair(1))
 
-        if (uno.is_button_pressed("a:1:u")):
+        if (uno.is_button_press("a:1:u")):
             if (x - 5 >= 0):
                 x -= 1
-        if (uno.is_button_pressed("a:3:u")):
+        if (uno.is_button_press("a:3:u")):
             x += 1
 
         if (uno.is_button_pressed("a:2:u")):

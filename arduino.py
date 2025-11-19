@@ -51,21 +51,34 @@ class Arduino:
             self.led_off(pins)
             time.sleep(gap)
 
+    def __register_pin(self, pin : str):
+        self.__pin_states[pin] = 0
+
+        def on_change(value):
+            if (value < 0.5):
+                self.__pin_states[pin] = time.time()
+            else:
+                self.__pin_states[pin] = 0
+
+
+        pin_obj = self.board.get_pin(pin)
+        pin_obj.register_callback(on_change)
+        pin_obj.enable_reporting()
+
+
+    def is_button_press(self, pin: str) -> bool:
+        if(pin not in self.__pin_states):
+            self.__register_pin(pin)
+
+        current_pin_state = self.__pin_states[pin]
+        return current_pin_state != 0
+
     def is_button_pressed(self, pin: str) -> bool:
         if(pin not in self.__pin_states):
-            self.__pin_states[pin] = 0
-
-            def on_change(value):
-                if(value < 0.5):
-                    self.__pin_states[pin] = time.time()
-
-            pin_obj = self.board.get_pin(pin)
-            pin_obj.register_callback(on_change)
-            pin_obj.enable_reporting()
+            self.__register_pin(pin)
 
         current_pin_state = self.__pin_states[pin]
         current_time = time.time()
-
         return current_time - current_pin_state <= self.FPS
 
     def buzzer_sound(self, length : float):
