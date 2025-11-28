@@ -5,63 +5,23 @@ from arduino import Arduino
 import curses
 from typing import List
 
+click_count = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
 
-class Unit:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+if __name__ == '__main__':
+    uno = Arduino(PORT="COM6", FPS=1000)
 
-    def die(self):
-        del self
+    start_time = time.time()
 
+    while time.time() - start_time < 30:
+        index = (time.time() - start_time) // 3
 
-def main(stdscr: curses.window):
-    FPS = 0.016
-    uno = Arduino(PORT="COM6", FPS=FPS)
-    curses.curs_set(0)
-    curses.start_color()
-
-    curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
-    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
-    curses.init_pair(3, curses.COLOR_BLUE, curses.COLOR_BLACK)
-
-    stdscr.nodelay(True)
-
-    bullet_list: List[dict[str, int]] = []
-    x, y = 0, 20
-
-    while True:
-        stdscr.clear()
-
-        stdscr.addstr(0, 0, "Game controller with Arduino")
-        stdscr.addstr(2, 0, f"Position : X={x}, Y={y}\t Bullet count : {len(bullet_list)}")
-
-        stdscr.attron(curses.color_pair(2))
-        stdscr.addstr(y, x, "*")
-        stdscr.attroff(curses.color_pair(2))
-
-        for b in bullet_list:
-            if (b["y"] <= 0):
-                del b
-                continue
-
-            b["y"] -= 1
-            stdscr.attron(curses.color_pair(1))
-            stdscr.addch(b["y"], b["x"], "+")
-            stdscr.attroff(curses.color_pair(1))
-
-        if (uno.is_button_press("a:1:u")):
-            if (x - 5 >= 0):
-                x -= 1
-        if (uno.is_button_press("a:3:u")):
-            x += 1
+        if(uno.is_button_pressed("a:1:u")):
+            click_count[index, 0] += 1
 
         if (uno.is_button_pressed("a:2:u")):
-            bullet_list.append({"x": x, "y": y})
-            # uno.buzzer_dot()
+            click_count[index, 1] += 1
 
-        stdscr.refresh()
-        time.sleep(FPS)
+        if(uno.is_button_pressed("a:3:u")):
+            click_count[index, 2] += 1
 
-
-curses.wrapper(main)
+        print(click_count)
