@@ -96,7 +96,7 @@ class Game3Page(tk.Frame):
         self.canvas.itemconfig(self.center_text, text=feedback_text, font=Typography.FONT_GAME_STATUS, fill="yellow")
 
         # After a delay, start the next round
-        self.controller.root.after(2000, self.start_next_round)
+        self.controller.root.after(500, self.start_next_round)
 
     def finish_game(self):
         self.controller.finalize_and_show_results("GAME3", self.all_r_times, self.all_scores)
