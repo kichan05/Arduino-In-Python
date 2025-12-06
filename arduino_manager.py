@@ -19,13 +19,13 @@ class ArduinoManager:
 
         self.board.samplingOn(self.SAMPLING_INTERVAL)
 
-        self.__pin_callback: dict[str, Callable[[], None]] = {}
+        self.__click_callback: dict[str, Callable[[], None]] = {}
         self.__pin_click_time: dict[str, int] = {}
 
         pins_to_register = ['a:1:i', 'a:2:i', 'a:3:i']
         for pin in pins_to_register:
             self._register_internal_handler(pin)
-            # self.__pin_callback[pin] = None
+            self.__click_callback[pin] = None
             self.__pin_click_time[pin] = 0
 
 
@@ -43,11 +43,15 @@ class ArduinoManager:
 
         if (current_time_ms - last_click_time_ms) > self.DEBOUNCE_DELAY_MS:
             self.__pin_click_time[pin] = current_time_ms
-            if pin in self.__pin_callback and self.__pin_callback[pin] is not None:
-                self.__pin_callback[pin]()
+            if pin in self.__click_callback and self.__click_callback[pin] is not None:
+                self.__click_callback[pin]()
 
     def on_click(self, pin: str, callback: Callable[[], None]):
-        self.__pin_callback[pin] = callback
+        self.__click_callback[pin] = callback
+
+    def clear_click_callbacks(self):
+        for pin in self.__click_callback:
+            self.__click_callback[pin] = None
 
     def close(self):
         if self.board:
