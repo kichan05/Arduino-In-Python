@@ -32,16 +32,12 @@ class ReactionGameApp:
         self.root.bind("<Escape>", lambda event: self.on_closing())
 
         self.board = None
-        self.setup_arduino()
-
-        try:
-            self.tts_engine = pyttsx3.init()
-        except:
-            self.tts_engine = None
+        self.tts_engine = None
 
         self.player_name = None
-        self.results = {}
-        self.game_scores = {}
+        self.results = []
+        self.game_scores = []
+        self.current_page = None
         self.start_time = 0
         self.is_waiting = False
         self.current_game_mode = None
@@ -56,6 +52,9 @@ class ReactionGameApp:
 
         self.frames = {}
 
+        # UI가 먼저 그려진 후, 하드웨어 초기화 실행
+        self.root.after(100, self.deferred_init)
+
         # 페이지 초기화
         for F in (StartPage, PlayerEntryPage, Game1Page, Game2Page, Game3Page, ResultPage, StatsPage):
             page_name = F.__name__
@@ -64,6 +63,15 @@ class ReactionGameApp:
             frame.grid(row=0, column=0, sticky="nsew")
 
         self.show_frame("PlayerEntryPage")
+
+    def deferred_init(self):
+        self.setup_arduino()
+        try:
+            self.tts_engine = pyttsx3.init()
+            print("TTS Engine Initialized.")
+        except Exception as e:
+            print(f"TTS Engine Error: {e}")
+            self.tts_engine = None
 
     # 종료 처리
     def on_closing(self):
@@ -104,40 +112,42 @@ class ReactionGameApp:
 
     # 페이지 전환
     def show_frame(self, page_name):
-        frame = self.frames[page_name]
-        frame.tkraise()
-        if hasattr(frame, "on_show"):
-            frame.on_show()
+        self.current_page = self.frames[page_name]
+        self.current_page.tkraise()
+        if hasattr(self.current_page, "on_show"):
+            self.current_page.on_show()
 
     # 입력 처리
     def handle_input(self, pin_num, data):
         if data is not None and data < 0.2 and self.is_waiting:
+            r_time = time.perf_counter() - self.start_time
+            score = calculate_score(r_time)
+
             if self.current_game_mode == "GAME1":
                 self.is_waiting = False
-                r_time = time.perf_counter() - self.start_time
                 is_correct = (pin_num == self.game_target)
-                score = calculate_score(r_time)
                 if not is_correct or r_time * 1000 < 180:
                     score = 0
                     r_time = 9999
-                self.results = {0: r_time}
-                self.game_scores = {0: score}
-                self.root.after(0, lambda: self._game_finished("GAME1", r_time, score))
+                
+                if self.current_page:
+                    self.current_page.on_round_completed(r_time, score)
 
             elif self.current_game_mode == "GAME3":
                 self.is_waiting = False
-                r_time = time.perf_counter() - self.start_time
                 user_guess = True if pin_num == 1 else False
                 is_correct = (user_guess == self.game_target)
-                score = calculate_score(r_time)
                 if not is_correct or r_time * 1000 < 180:
                     score = 0
                     r_time = 9999
-                self.results = {0: r_time}
-                self.game_scores = {0: score}
-                self.root.after(0, lambda: self._game_finished("GAME3", r_time, score))
+
+                if self.current_page:
+                    self.current_page.on_round_completed(r_time, score)
 
     # 게임 종료 처리
-    def _game_finished(self, game_mode, r_time, score):
-        self.database_manager.save_record(game_mode, self.player_name, r_time, score)
+    def finalize_and_show_results(self, game_mode, r_times, scores):
+        self.results = r_times
+        self.game_scores = scores
+        for r_time, score in zip(r_times, scores):
+            self.database_manager.save_record(game_mode, self.player_name, r_time, score)
         self.show_frame("ResultPage")

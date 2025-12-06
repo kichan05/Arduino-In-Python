@@ -12,12 +12,14 @@ class ResultPage(tk.Frame):
 
         cx, cy = controller.cx, controller.cy
 
-        self.canvas.create_text(cx, cy * 0.3, text="RESULT", font=Typography.FONT_RESULT_TITLE, fill="white")
+        self.canvas.create_text(cx, cy * 0.2, text="RESULT", font=Typography.FONT_RESULT_TITLE, fill="white")
 
-        self.res_text = self.canvas.create_text(cx, cy - 30, text="", font=Typography.FONT_RESULT_VAL, fill="yellow",
-                                                justify="center")
-
-        self.score_text = self.canvas.create_text(cx, cy + 50, text="", font=Typography.FONT_RESULT_SCORE, fill="white")
+        self.best_time_text = self.canvas.create_text(cx, cy - 80, text="", font=Typography.FONT_RESULT_VAL,
+                                                      fill="white")
+        self.avg_time_text = self.canvas.create_text(cx, cy, text="", font=Typography.FONT_RESULT_VAL,
+                                                     fill="white")
+        self.total_score_text = self.canvas.create_text(cx, cy + 80, text="", font=Typography.FONT_RESULT_SCORE,
+                                                        fill="yellow")
 
         self.home_btn = self.canvas.create_text(cx, controller.h * 0.9, text="MAIN MENU", font=Typography.FONT_MAIN_MENU,
                                                 fill="white")
@@ -40,18 +42,28 @@ class ResultPage(tk.Frame):
         else:
             self.canvas.config(bg="#202020")
 
-        r_time = self.controller.results.get(0, 9999)
-        score = self.controller.game_scores.get(0, 0)
+        r_times = self.controller.results
+        scores = self.controller.game_scores
 
-        if r_time == 9999:
-            txt = "DISQUALIFIED"
-            color = "red"
-            s_txt = "0 pts"
+        if not r_times:
+            # Handle case with no results
+            self.canvas.itemconfig(self.best_time_text, text="NO RESULTS")
+            self.canvas.itemconfig(self.avg_time_text, text="")
+            self.canvas.itemconfig(self.total_score_text, text="")
+            return
+
+        successful_r_times = [t for t in r_times if t != 9999]
+        total_score = sum(scores)
+
+        if not successful_r_times:
+            best_time_ms = "N/A"
+            avg_time_ms = "N/A"
         else:
-            ms = r_time * 1000
-            txt = f"{ms:.1f} MS"
-            color = "yellow"
-            s_txt = f"{score} pts"
+            best_time_ms = f"{min(successful_r_times) * 1000:.1f} MS"
+            avg_time_ms = f"{(sum(successful_r_times) / len(successful_r_times)) * 1000:.1f} MS"
+        
+        total_score_str = f"{total_score} pts"
 
-        self.canvas.itemconfig(self.res_text, text=txt, fill=color)
-        self.canvas.itemconfig(self.score_text, text=s_txt)
+        self.canvas.itemconfig(self.best_time_text, text=f"BEST: {best_time_ms}")
+        self.canvas.itemconfig(self.avg_time_text, text=f"AVG: {avg_time_ms}")
+        self.canvas.itemconfig(self.total_score_text, text=f"TOTAL SCORE: {total_score_str}")
