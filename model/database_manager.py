@@ -1,10 +1,13 @@
 import datetime
 import sqlite3
+import os
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+db_path = os.path.join(script_dir, "game_history.db")
 
 class DatabaseManager:
     def __init__(self):
-        self.conn = sqlite3.connect("game_history.db", check_same_thread=False)
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.cursor = self.conn.cursor()
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS history (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,

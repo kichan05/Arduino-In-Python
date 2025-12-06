@@ -126,7 +126,7 @@ class ReactionGameApp:
 
     # 데이터베이스 초기화
     def init_db(self):
-        self.conn = sqlite3.connect("game_history.db", check_same_thread=False)  # DB 연결
+        self.conn = sqlite3.connect("../model/game_history.db", check_same_thread=False)  # DB 연결
         self.cursor = self.conn.cursor()  # 커서 생성
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS history (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
