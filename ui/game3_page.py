@@ -2,9 +2,11 @@ import random
 import threading
 import time
 import tkinter as tk
-import pyttsx3 # Keep import for type hinting or if needed later, though engine comes from controller
+import pyttsx3
+import pythoncom
 
 from .typography import Typography
+
 
 
 class Game3Page(tk.Frame):
@@ -55,21 +57,28 @@ class Game3Page(tk.Frame):
         self.canvas.itemconfig(self.center_text, text="")
         self.controller.game_target = (v_color == a_color)
 
-        if self.controller.tts_engine:
-            # Use the already initialized engine from the controller
-            threading.Thread(target=self.play_sound, args=(a_color, self.controller.tts_engine)).start()
+        # The controller's tts_engine is no longer used here.
+        # A new engine is initialized within the thread to ensure stability.
+        threading.Thread(target=self.play_sound, args=(a_color,)).start()
 
         self.controller.start_time = time.perf_counter()
         self.controller.is_waiting = True
 
-    def play_sound(self, text, engine):
-        # Receive the engine from the main thread
+    def play_sound(self, text):
+        # On Windows, COM must be initialized in each thread that uses it.
+        # pyttsx3 relies on COM, so we initialize and uninitialize it here.
+        pythoncom.CoInitialize()
         try:
+            # Initialize a new TTS engine instance within the thread, specifying the 'sapi5' driver for Windows.
+            engine = pyttsx3.init(driverName='sapi5')
             engine.say(text)
             engine.runAndWait()
         except Exception as e:
             print(f"TTS Playback Error: {e}")
             pass
+        finally:
+            # Uninitialize COM for this thread.
+            pythoncom.CoUninitialize()
 
     def on_round_completed(self, r_time, score):
         self.all_r_times.append(r_time)
