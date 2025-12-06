@@ -39,7 +39,7 @@ class ReactionGameApp:
         except:
             self.tts_engine = None
 
-        self.player_name = "PLAYER"
+        self.player_name = None
         self.results = {}
         self.game_scores = {}
         self.start_time = 0
@@ -63,7 +63,7 @@ class ReactionGameApp:
             self.frames[page_name] = frame
             frame.grid(row=0, column=0, sticky="nsew")
 
-        self.show_frame("StartPage")
+        self.show_frame("PlayerEntryPage")
 
     # 종료 처리
     def on_closing(self):

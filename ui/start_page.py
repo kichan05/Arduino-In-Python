@@ -30,9 +30,9 @@ class StartPage(tk.Frame):
             self.canvas.tag_bind(btn, "<Button-1>", lambda e: command())
 
         spacing = 250
-        create_menu_btn("GAME 1\n(NUMBERS)", cx - spacing, cy, lambda: self.go_to_entry("GAME1"))
-        create_menu_btn("GAME 2\n(BLINK)", cx, cy, lambda: self.go_to_entry("GAME2"))
-        create_menu_btn("GAME 3\n(COLOR/SOUND)", cx + spacing, cy, lambda: self.go_to_entry("GAME3"))
+        create_menu_btn("GAME 1\n(NUMBERS)", cx - spacing, cy, lambda: self.start_game("GAME1"))
+        create_menu_btn("GAME 2\n(BLINK)", cx, cy, lambda: self.start_game("GAME2"))
+        create_menu_btn("GAME 3\n(COLOR/SOUND)", cx + spacing, cy, lambda: self.start_game("GAME3"))
 
         create_menu_btn("STATS", cx, cy + 200, lambda: controller.show_frame("StatsPage"))
         create_menu_btn("EXIT", cx, cy + 300, lambda: controller.on_closing())
@@ -43,7 +43,9 @@ class StartPage(tk.Frame):
         else:
             self.canvas.config(bg="#202020")
 
-    # 게임 모드 선택 후 닉네임 입력 페이지로 이동
-    def go_to_entry(self, mode):
+    # 게임 모드 선택 후 바로 게임 페이지로 이동
+    def start_game(self, mode):
         self.controller.current_game_mode = mode
-        self.controller.show_frame("PlayerEntryPage")
+        # "GAME1" -> "Game1Page"
+        page_name = mode.replace("GAME", "Game") + "Page"
+        self.controller.show_frame(page_name)
