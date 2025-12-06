@@ -4,7 +4,7 @@ from PIL import Image, ImageTk
 import pyfirmata2
 import time
 import random
-import sqlite3
+from database_manager import DatabaseManager
 import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -15,6 +15,7 @@ import mediapipe as mp
 from scipy.spatial import distance as dist
 import pyttsx3
 import threading
+from typing import Optional
 
 # 폰트 설정
 FONT_FAMILY = "Consolas"
@@ -206,6 +207,7 @@ def run_ai_blink_game(board, root):
 class ReactionGameApp:
     def __init__(self, root):
         self.root = root
+        self.database_manager = DatabaseManager()
         self.root.title("Reaction Speed Game")
 
         self.w = self.root.winfo_screenwidth()
@@ -219,7 +221,6 @@ class ReactionGameApp:
 
         self.board = None
         self.setup_arduino()
-        self.init_db()
 
         try:
             self.tts_engine = pyttsx3.init()
@@ -254,11 +255,10 @@ class ReactionGameApp:
 
     # 종료 처리
     def on_closing(self):
-        if self.board: self.board.exit()
-        try:
-            self.conn.close()
-        except:
-            pass
+        if self.board:
+            self.board.exit()
+
+        self.database_manager.close()
         self.root.destroy()
         sys.exit()
 
@@ -289,26 +289,6 @@ class ReactionGameApp:
         except Exception as e:
             print(f"Arduino Error: {e}")
             self.board = None
-
-    # 데이터베이스
-    def init_db(self):
-        self.conn = sqlite3.connect("game_history.db", check_same_thread=False)
-        self.cursor = self.conn.cursor()
-
-        self.cursor.execute('''CREATE TABLE IF NOT EXISTS history (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                player_name TEXT, 
-                                reaction_time REAL, 
-                                played_at TEXT)''')
-
-        self.cursor.execute("PRAGMA table_info(history)")
-        columns = [info[1] for info in self.cursor.fetchall()]
-
-        if "game_mode" not in columns:
-            self.cursor.execute("ALTER TABLE history ADD COLUMN game_mode TEXT")
-        if "score" not in columns:
-            self.cursor.execute("ALTER TABLE history ADD COLUMN score INTEGER")
-        self.conn.commit()
 
     # 페이지 전환
     def show_frame(self, page_name):
@@ -346,35 +326,12 @@ class ReactionGameApp:
 
     # 게임 종료 처리
     def _game_finished(self, game_mode, r_time, score):
-        self.save_record(game_mode, self.player_name, r_time, score)
+        self.database_manager.save_record(game_mode, self.player_name, r_time, score)
         self.show_frame("ResultPage")
-
-    # 기록 저장
-    def save_record(self, game_mode, name, r_time, score):
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.cursor.execute(
-            "INSERT INTO history (game_mode, player_name, reaction_time, score, played_at) VALUES (?, ?, ?, ?, ?)",
-            (game_mode, name, r_time * 1000, score, now))
-        self.conn.commit()
-
-    # 통계 조회
-    def get_stats(self, game_mode, name):
-        try:
-            self.cursor.execute("SELECT played_at, score FROM history WHERE game_mode = ? AND player_name = ?",
-                                (game_mode, name))
-            return self.cursor.fetchall()
-        except sqlite3.OperationalError as e:
-            return []
-
-    # 전체 플레이어 이름 조회
-    def get_all_player_names(self):
-        self.cursor.execute("SELECT DISTINCT player_name FROM history ORDER BY player_name ASC")
-        return [row[0] for row in self.cursor.fetchall()]
-
 
 # 시작 페이지
 class StartPage(tk.Frame):
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller: 'ReactionGameApp'):
         tk.Frame.__init__(self, parent)
         self.controller = controller
         self.canvas = tk.Canvas(self, width=controller.w, height=controller.h, highlightthickness=0)
@@ -422,7 +379,7 @@ class StartPage(tk.Frame):
 
 # 닉네임 입력 페이지
 class PlayerEntryPage(tk.Frame):
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller: 'ReactionGameApp'):
         tk.Frame.__init__(self, parent)
         self.controller = controller
         self.canvas = tk.Canvas(self, width=controller.w, height=controller.h, highlightthickness=0)
@@ -534,7 +491,7 @@ class PlayerEntryPage(tk.Frame):
 
 # GAME 1 페이지
 class Game1Page(tk.Frame):
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller: 'ReactionGameApp'):
         tk.Frame.__init__(self, parent)
         self.controller = controller
         self.canvas = tk.Canvas(self, width=controller.w, height=controller.h, highlightthickness=0)
@@ -560,7 +517,7 @@ class Game1Page(tk.Frame):
 
 # GAME 2 페이지
 class Game2Page(tk.Frame):
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller: 'ReactionGameApp'):
         tk.Frame.__init__(self, parent)
         self.controller = controller
         self.canvas = tk.Canvas(self, width=controller.w, height=controller.h, highlightthickness=0, bg="black")
@@ -583,7 +540,7 @@ class Game2Page(tk.Frame):
         if reaction is not None:
             self.controller.results = {0: reaction}
             self.controller.game_scores = {0: score}
-            self.controller.save_record("GAME2", self.controller.player_name, reaction, score)
+            self.controller.database_manager.save_record("GAME2", self.controller.player_name, reaction, score)
             self.controller.show_frame("ResultPage")
         else:
             self.controller.show_frame("StartPage")
@@ -591,7 +548,7 @@ class Game2Page(tk.Frame):
 
 # GAME 3 페이지
 class Game3Page(tk.Frame):
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller: 'ReactionGameApp'):
         tk.Frame.__init__(self, parent)
         self.controller = controller
         self.canvas = tk.Canvas(self, width=controller.w, height=controller.h, highlightthickness=0)
@@ -631,7 +588,7 @@ class Game3Page(tk.Frame):
 
 # 결과 페이지
 class ResultPage(tk.Frame):
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller: 'ReactionGameApp'):
         tk.Frame.__init__(self, parent)
         self.controller = controller
         self.canvas = tk.Canvas(self, width=controller.w, height=controller.h, highlightthickness=0, bg="#202020")
@@ -687,7 +644,7 @@ class ResultPage(tk.Frame):
 
 # 통계 페이지
 class StatsPage(tk.Frame):
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller: 'ReactionGameApp'):
         tk.Frame.__init__(self, parent)
         self.controller = controller
         self.canvas = tk.Canvas(self, width=controller.w, height=controller.h, highlightthickness=0, bg="white")
@@ -768,7 +725,7 @@ class StatsPage(tk.Frame):
 
     # 그래프
     def load_player_list(self):
-        names = self.controller.get_all_player_names()
+        names = self.controller.database_manager.get_all_player_names()
         list_frame = tk.Frame(self)
         scrollbar = tk.Scrollbar(list_frame)
         scrollbar.pack(side="right", fill="y")
@@ -791,7 +748,7 @@ class StatsPage(tk.Frame):
         if self.chart_widget: self.chart_widget.destroy()
 
         mode = self.selected_game.get()
-        data = self.controller.get_stats(mode, name)
+        data = self.controller.database_manager.get_stats_by_player(mode, name)
 
         if not data:
             messagebox.showinfo("Info", "No data found for this player.")
