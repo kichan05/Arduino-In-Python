@@ -4,13 +4,11 @@ from tkinter import messagebox
 
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
-from app import ReactionGameApp
 from .typography import Typography
 
 
 class StatsPage(tk.Frame):
-    def __init__(self, parent, controller: ReactionGameApp):
+    def __init__(self, parent, controller: 'ReactionGameApp'):
         tk.Frame.__init__(self, parent)
         self.controller = controller
         self.canvas = tk.Canvas(self, width=controller.w, height=controller.h, highlightthickness=0, bg="white")

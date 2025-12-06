@@ -1,10 +1,9 @@
 import tkinter as tk
-from app import ReactionGameApp
 from game.game2 import run_ai_blink_game
 from .typography import Typography
 
 class Game2Page(tk.Frame):
-    def __init__(self, parent, controller: ReactionGameApp):
+    def __init__(self, parent, controller: 'ReactionGameApp'):
         tk.Frame.__init__(self, parent)
         self.controller = controller
         self.canvas = tk.Canvas(self, width=controller.w, height=controller.h, highlightthickness=0, bg="black")

@@ -5,6 +5,7 @@ import tkinter as tk
 import pyfirmata2
 import pyttsx3
 from PIL import Image, ImageTk
+from arduino_manager import ArduinoManager
 from model.database_manager import DatabaseManager
 from ui.game1_page import Game1Page
 from ui.game2_page import Game2Page
@@ -20,6 +21,7 @@ class ReactionGameApp:
     def __init__(self, root):
         self.root = root
         self.database_manager = DatabaseManager()
+        self.arduino_manager = ArduinoManager(PORT = pyfirmata2.Arduino.AUTODETECT)
         self.root.title("Reaction Speed Game")
 
         self.w = self.root.winfo_screenwidth()
@@ -31,8 +33,8 @@ class ReactionGameApp:
         self.root.attributes('-fullscreen', True)
         self.root.bind("<Escape>", lambda event: self.on_closing())
 
-        self.board = None
-        self.setup_arduino()
+        # self.board = None
+        # self.setup_arduino()
 
         try:
             self.tts_engine = pyttsx3.init()
@@ -67,9 +69,7 @@ class ReactionGameApp:
 
     # 종료 처리
     def on_closing(self):
-        if self.board:
-            self.board.exit()
-
+        self.arduino_manager.close()
         self.database_manager.close()
         self.root.destroy()
         sys.exit()
@@ -90,17 +90,17 @@ class ReactionGameApp:
                 self.pil_images[key] = None
 
     # Arduino 설정
-    def setup_arduino(self):
-        try:
-            self.board = pyfirmata2.Arduino(pyfirmata2.Arduino.AUTODETECT)
-            self.board.samplingOn(10)
-            self.board.get_pin('a:1:i').register_callback(lambda d: self.handle_input(1, d))
-            self.board.get_pin('a:2:i').register_callback(lambda d: self.handle_input(2, d))
-            self.board.get_pin('a:3:i').register_callback(lambda d: self.handle_input(3, d))
-            print("Arduino Connected!")
-        except Exception as e:
-            print(f"Arduino Error: {e}")
-            self.board = None
+    # def setup_arduino(self):
+    #     try:
+    #         self.board = pyfirmata2.Arduino(pyfirmata2.Arduino.AUTODETECT)
+    #         self.board.samplingOn(10)
+    #         self.board.get_pin('a:1:i').register_callback(lambda d: self.handle_input(1, d))
+    #         self.board.get_pin('a:2:i').register_callback(lambda d: self.handle_input(2, d))
+    #         self.board.get_pin('a:3:i').register_callback(lambda d: self.handle_input(3, d))
+    #         print("Arduino Connected!")
+    #     except Exception as e:
+    #         print(f"Arduino Error: {e}")
+    #         self.board = None
 
     # 페이지 전환
     def show_frame(self, page_name):
